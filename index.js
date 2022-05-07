@@ -1,57 +1,122 @@
 const express = require('express');
+const { MongoClient, ServerApiVersion, ConnectionCheckedInEvent } = require('mongodb');
+const ObjectId = require('mongodb').ObjectId;
 const cors = require('cors')
+var jwt = require('jsonwebtoken');
 const app = express();
+require('dotenv').config()
 const port= process.env.PORT || 5000;
 
 app.use(cors())
 app.use(express.json());
 
 
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.tvznq.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
-app.get('/', (req, res)=>{
-    res.send('warehouse');
-});
+async function run(){
+    try{
+        await client.connect();
+        const bookCollection = client.db("warehouse").collection("bookInfo");
+        
 
-const users = [
-    {id: 1, name:'sabana',email: 'sabana@gmail.com', phone: '01719983249'},
-    {id: 2, name:'sabnur',email: 'sabnur@gmail.com', phone: '01719983249'},
-    {id: 3, name:'Suchorita',email: 'Suchorita@gmail.com', phone: '01719983249'},
-    {id: 4, name:'sanaulla',email: 'sanaulla@gmail.com', phone: '01719983249'},
-    {id: 5, name:'kabir',email: 'kabir@gmail.com', phone: '01719983249'},
-    {id: 6, name:'samim',email: 'samim@gmail.com', phone: '01719983249'},
-    {id: 7, name:'khalek',email: 'khalek@gmail.com', phone: '01719983249'},
+        // Read data in server site from database-------------
+        app.get('/bookInfo', async(req, res)=> {
+            const query = {};
+            const cursor = bookCollection.find(query);
+            const bookInformation = await cursor.toArray();
+            res.send(bookInformation);
+            
+        })
 
-]
+        app.get('/', (req, res) => {
+            res.send('warehouse running');
+        });
+
+        //------------JWT------------------
+
+        // app.post('/signin', async(req, res)=>{
+        //     const user = req.body;
+        //     const accessToken = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{
+        //         ExpireIn: '1d'
+        //     })
+        //     res.send({accessToken});
 
 
-app.get('/users', (req, res) => {
-    console.log('query', req.query)
-    if(req.query.name){
-        const search = req.query.name.toLowerCase();
-        const matched = users.filter(user=>user.name.toLowerCase().includes(search))
-        res.send(matched);
+        // })
+
+
+        // app.get('/bookInfo', async(req, res)=>{
+        //     const email = req.query.email ;
+        //     console.log(email);
+        //     const query = {email:email};
+        //     const cursor = bookCollection.find(query);
+        //     const myBooks = await cursor.toArray();
+        //     res.send(myBooks);
+        // })
+
+
+
+
+
+
+        //------------------------------------------
+
+        app.get('/bookInfo/:id', async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const result = await bookCollection.findOne(query);
+            res.send(result);
+        })
+
+
+        // post data to MongoDB ------------------------------
+
+        app.post('/bookInfo', async(req, res)=>{
+            console.log(req.body)
+            const bookInfo = req.body;
+            const result =await bookCollection.insertOne(bookInfo)
+            res.send(result);
+        })
+
+        //Book Information Update----------------------------------
+        app.put('/bookInfo/:id', async(req, res)=>{
+            const id= req.params.id;
+            const updatedBookInfo = req.body;
+            const filter = {_id: ObjectId(id)};
+            const options = { upsert: true };
+            const updatedBookInfoDoc = {
+                $set: {
+                   name: updatedBookInfo.name,
+                   email: updatedBookInfo.email,
+                   author: updatedBookInfo.author,
+                   stock: updatedBookInfo.stock,
+                   price: updatedBookInfo.price,
+                   publisher: updatedBookInfo.publisher,
+                   img: updatedBookInfo.img,
+                   description: updatedBookInfo.description
+                   
+                }
+            };
+            const result = await bookCollection.updateOne(filter, updatedBookInfoDoc, options );
+            res.send(result);
+        })
+
+        // BookInfo deleting from server side-----------------------
+        app.delete('/bookInfo/:id', async(req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const result  = await bookCollection.deleteOne(query);
+            res.send(result);
+        })
     }
-    else{
-        res.send(users);
+    finally{
+        // await client.close();
     }
-});
+}
 
+run().catch(console.dir)
 
-app.get('/user/:id',(req, res) => {
-    console.log(req.params);
-    const id = parseInt(req.params.id);
-    const user = users.find(u=>u.id === id);
-    res.send(user);
-})
-
-
-app.post('/productInfo', (req, res)=>{
-    console.log(req.body)
-    const productInfo = req.body;
-    productInfo.id = users.length + 1;
-    users.push(productInfo);
-    res.send(productInfo);
-})
 
 
 app.listen(port, ()=>{
