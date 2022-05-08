@@ -33,34 +33,6 @@ async function run(){
             res.send('warehouse running');
         });
 
-        //------------JWT------------------
-
-        // app.post('/signin', async(req, res)=>{
-        //     const user = req.body;
-        //     const accessToken = jwt.sign(user,process.env.ACCESS_TOKEN_SECRET,{
-        //         ExpireIn: '1d'
-        //     })
-        //     res.send({accessToken});
-
-
-        // })
-
-
-        // app.get('/bookInfo', async(req, res)=>{
-        //     const email = req.query.email ;
-        //     console.log(email);
-        //     const query = {email:email};
-        //     const cursor = bookCollection.find(query);
-        //     const myBooks = await cursor.toArray();
-        //     res.send(myBooks);
-        // })
-
-
-
-
-
-
-        //------------------------------------------
 
         app.get('/bookInfo/:id', async(req, res)=>{
             const id = req.params.id;
@@ -98,9 +70,11 @@ async function run(){
                    
                 }
             };
+
             const result = await bookCollection.updateOne(filter, updatedBookInfoDoc, options );
             res.send(result);
         })
+
 
         // BookInfo deleting from server side-----------------------
         app.delete('/bookInfo/:id', async(req, res)=>{
